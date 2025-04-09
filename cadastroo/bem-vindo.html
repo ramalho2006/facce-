@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="caixa">
+        <h1>Bem-vindo!</h1>
+        <p>Login realizado com sucesso.</p>
+        <p>Você está logado como: <span id="emailUsuario"></span></p>
+        <button onclick="logout()">Seguir...</button>
+    </div>
+
+    <script>
+        const email = localStorage.getItem("usuarioEmail");
+        document.getElementById("emailUsuario").innerText = email ?? "usuário desconhecido";
+
+        function logout() {
+            localStorage.removeItem("usuarioEmail");
+            window.location.href = "face.html"; // ou o nome do seu arquivo de login
+        }
+    </script>
+</body>
+</html>

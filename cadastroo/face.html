@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Feed do Facebook Clone</title>
+  <style>
+    body {
+      background-color: #f0f2f5;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    main {
+      max-width: 600px;
+      margin: 30px auto;
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #1877f2;
+      text-align: center;
+    }
+    .post-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .post-box textarea {
+      resize: none;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    .post-box input[type="file"] {
+      display: none;
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .actions label {
+      background-color: #e4e6eb;
+      padding: 8px 15px;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+    .post-btn {
+      background-color: #1877f2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .post-btn:hover {
+      background-color: #145cbe;
+    }
+    .post {
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    .post img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .reaction-bar {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .reaction {
+      cursor: pointer;
+      font-size: 20px;
+    }
+    .delete-button {
+      margin-top: 10px;
+      background-color: #e53935;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Facebook</h1>
+  <div class="post-box">
+    <textarea id="postText" rows="3" placeholder="No que você está pensando?"></textarea>
+    <div class="actions">
+      <label for="postImage">📷 Foto</label>
+      <input type="file" id="postImage" accept="image/*">
+      <button class="post-btn" onclick="post()">Publicar</button>
+    </div>
+  </div>
+  <div id="feed"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const supabase = window.supabase.createClient(
+    "https://acaydgixhvkahlnapghr.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjYXlkZ2l4aHZrYWhsbmFwZ2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwMjc4MTgsImV4cCI6MjA1OTYwMzgxOH0.UTZIC9PPBZvMfDStc89cSDZs5_pHMZOHVANxfHUyM5w"
+  );
+
+  async function uploadImage(file) {
+  const filePath = `posts/${Date.now()}_${file.name}`;
+
+  const { error } = await supabase
+    .storage
+    .from('post-images')
+    .upload(filePath, file);
+
+  if (error) {
+    console.error("Erro ao fazer upload da imagem:", error);
+    return null;
+  }
+
+  const { data } = supabase
+    .storage
+    .from('post-images')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
+const { data, error } = await supabase.from("posts").insert([
+  { texto: text, imagem_url: imageUrl }
+]);
+
+console.log("Imagem salva no post:", imageUrl);
+
+
+  async function post() {
+    const text = document.getElementById("postText").value.trim();
+    const imageFile = document.getElementById("postImage").files[0];
+
+    if (!text && !imageFile) {
+      alert("Digite algo ou selecione uma imagem.");
+      return;
+    }
+
+    let imageUrl = null;
+    if (imageFile) {
+      imageUrl = await uploadImage(imageFile);
+    }
+
+    const { error } = await supabase.from("posts").insert([{ texto: text, imagem_url: imageUrl }]);
+
+    if (error) {
+      alert("Erro ao publicar post.");
+      console.error(error);
+      return;
+    }
+
+    document.getElementById("postText").value = "";
+    document.getElementById("postImage").value = "";
+    loadPosts();
+  }
+
+  async function loadPosts() {
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Erro ao carregar posts:", error);
+    return;
+  }
+
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+  posts.forEach(post => {
+    const div = document.createElement("div");
+    div.className = "post";
+
+    if (post.texto) {
+      const p = document.createElement("p");
+      p.textContent = post.texto;
+      div.appendChild(p);
+    }
+
+    if (post.imagem_url) {
+      const img = document.createElement("img");
+      img.src = post.imagem_url;
+      img.style.maxWidth = "100%";
+      div.appendChild(img);
+    }
+
+    const reactions = document.createElement("div");
+    reactions.className = "reaction-bar";
+    reactions.innerHTML = `
+      <span class="reaction">&#128077;</span>
+      <span class="reaction">&#128151;</span>
+      <span class="reaction">&#128514;</span>
+      <span class="reaction">&#128558;</span>
+      <span class="reaction">&#128546;</span>
+      <span class="reaction">&#128545;</span>
+    `;
+    div.appendChild(reactions);
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "delete-button";
+    delBtn.innerText = "Excluir";
+    delBtn.onclick = () => {
+      div.remove(); // apenas remove da tela (não do banco)
+    };
+    div.appendChild(delBtn);
+
+    feed.appendChild(div);
+  });
+}
+
+</script>
+</body>
+</html>
